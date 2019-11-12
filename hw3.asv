@@ -1,3 +1,4 @@
+% YOU CAN RUN THE CODE BY EACH SECTION LIKE JUPYTER NOTEBOOK
 %% Part 0 - Setup
 clear all; close all; clc;
 addpath('code');
@@ -50,7 +51,13 @@ clc;
 points_3d = [0 0 19; 64 0 19; 0 0 29; 64 0 29; 64 64 29; 16 16 48];
 points_2d = [654 1902; 1569 1835; 637 1802; 1579 1541; 1452 1183; 872 1409];
 c = calc_calibration(points_3d, points_2d);
-disp(c);
+for i=1:length(points_3d)
+    p1 = [points_3d(i,:) 1].';
+    result = (c*p1);
+    result = round((result / result(3)).');
+    p1 = p1.';
+    fprintf("%s => %s", p1, result));
+end
 
 
 %% Function Definitions
@@ -65,17 +72,19 @@ function c=calc_calibration(points_3d, points_2d)
     % Returns: 
     %   - C: 3 x 4 calibration matrix
     A = [];
+    B = [];
     for i=1:length(points_3d)
         p_3d = points_3d(i,:);
         p_2d = points_2d(i,:);
         u = p_2d(1);
         v = p_2d(2);
-        row1 = [-p_3d(1) -p_3d(2) -p_3d(3) -1 0 0 0 0 u*p_3d(1) u*p_3d(2) u*p_3d(3) u];
-        row2 = [0 0 0 0 -p_3d(1) -p_3d(2) -p_3d(3) -1 v*p_3d(1) v*p_3d(2) v*p_3d(3) v];
+        row1 = [-p_3d(1) -p_3d(2) -p_3d(3) -1 0 0 0 0 u*p_3d(1) u*p_3d(2) u*p_3d(3)];
+        row2 = [0 0 0 0 -p_3d(1) -p_3d(2) -p_3d(3) -1 v*p_3d(1) v*p_3d(2) v*p_3d(3)];
         A = [A; row1; row2];
+        B = [B; -u; -v];
     end
-    B = zeros(size(A, 1),1);
     c = linsolve(A, B);
+    c = [c; 1];
     c = reshape(c, [3,4]);
 end
 function sort_descend_or_ascend_test(img1, img2, F1, F2, unfiltered_m, unfiltered_s)
@@ -156,20 +165,24 @@ function [newM, newS]=sort_and_cutoff(m, s, percentage)
     % Summary:
     %   - sorts the features by score and removes the poorest percentage
     % Parameters:
-    %   - img1: image 1
-    %   - img2: image 2
-    %   - F1: Feature matrix for image 1
-    %   - F2: Feature matrix for image 2
     %   - m: 2 x n matrix with each column representing the
     %   index of F1 and F2
+    %   - s: 1 x n matrix with each element representing the score
+    %   - percentage: fraction of poorest features to remove
     index = round(percentage*length(m));
     
-    [newS, s_order] = sort(s,'ascend');
+    [newS, s_order] = sort(s,'ascend'); % which is better 'ascend' vs 'descend'?
     newM = m(:,s_order);
     newM = newM(:,1:index);
     newS = newS(1:index);
 end
 
 function img = getImage(index, image_files)
+    % Summary:
+    %   - retrieves the given image by index
+    %   - odds are images and evens are masks
+    % Parameters:
+    %   - index: a number 
+    %   - image_files: the list of file names in the '/data/' folder
     img = im2single( rgb2gray(imread( convertStringsToChars(image_files(index)) ) ) );
 end

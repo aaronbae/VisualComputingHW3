@@ -49,9 +49,18 @@ disp("Testing finished");
 clc;
 % Hand Engineered matrix values
 points_3d = [0 0 19; 64 0 19; 0 0 29; 64 0 29; 64 64 29; 16 16 48];
-points_2d = [654 1902; 1569 1835; 637 1802; 1579 1541; 1452 1183; 872 1409];
+points_2d = [654 1902; 1569 1835; 637 1802; 1579 1731; 1453 1183; 872 1409];
 c = calc_calibration(points_3d, points_2d);
-disp(c);
+for i=1:length(points_3d)
+    p1 = [points_3d(i,:) 1].';
+    result = (c*p1);
+    result = round((result / result(3)).');
+    p1 = p1.';
+    fprintf("%2d ", p1);
+    fprintf("  =>  ", p1);
+    fprintf("%6d ", result);
+    disp(" ");
+end
 
 
 %% Function Definitions
@@ -66,17 +75,19 @@ function c=calc_calibration(points_3d, points_2d)
     % Returns: 
     %   - C: 3 x 4 calibration matrix
     A = [];
+    B = [];
     for i=1:length(points_3d)
         p_3d = points_3d(i,:);
         p_2d = points_2d(i,:);
         u = p_2d(1);
         v = p_2d(2);
-        row1 = [-p_3d(1) -p_3d(2) -p_3d(3) -1 0 0 0 0 u*p_3d(1) u*p_3d(2) u*p_3d(3) u];
-        row2 = [0 0 0 0 -p_3d(1) -p_3d(2) -p_3d(3) -1 v*p_3d(1) v*p_3d(2) v*p_3d(3) v];
+        row1 = [-p_3d(1) -p_3d(2) -p_3d(3) -1 0 0 0 0 u*p_3d(1) u*p_3d(2) u*p_3d(3)];
+        row2 = [0 0 0 0 -p_3d(1) -p_3d(2) -p_3d(3) -1 v*p_3d(1) v*p_3d(2) v*p_3d(3)];
         A = [A; row1; row2];
+        B = [B; -u; -v];
     end
-    B = zeros(size(A, 1),1);
     c = linsolve(A, B);
+    c = [c; 1];
     c = reshape(c, [3,4]);
 end
 function sort_descend_or_ascend_test(img1, img2, F1, F2, unfiltered_m, unfiltered_s)
