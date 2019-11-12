@@ -1,4 +1,3 @@
-% YOU CAN RUN THE CODE BY EACH SECTION LIKE JUPYTER NOTEBOOK
 %% Part 0 - Setup
 clear all; close all; clc;
 addpath('code');
@@ -157,24 +156,20 @@ function [newM, newS]=sort_and_cutoff(m, s, percentage)
     % Summary:
     %   - sorts the features by score and removes the poorest percentage
     % Parameters:
+    %   - img1: image 1
+    %   - img2: image 2
+    %   - F1: Feature matrix for image 1
+    %   - F2: Feature matrix for image 2
     %   - m: 2 x n matrix with each column representing the
     %   index of F1 and F2
-    %   - s: 1 x n matrix with each element representing the score
-    %   - percentage: fraction of poorest features to remove
     index = round(percentage*length(m));
     
-    [newS, s_order] = sort(s,'ascend'); % which is better 'ascend' vs 'descend'?
+    [newS, s_order] = sort(s,'ascend');
     newM = m(:,s_order);
     newM = newM(:,1:index);
     newS = newS(1:index);
 end
 
 function img = getImage(index, image_files)
-    % Summary:
-    %   - retrieves the given image by index
-    %   - odds are images and evens are masks
-    % Parameters:
-    %   - index: a number 
-    %   - image_files: the list of file names in the '/data/' folder
     img = im2single( rgb2gray(imread( convertStringsToChars(image_files(index)) ) ) );
 end
