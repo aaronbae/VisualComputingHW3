@@ -35,34 +35,30 @@ size(F2)
 [m, s] = filter_by_mask(mask1, mask2, F1, F2, unfiltered_m, unfiltered_s); 
 
 visualize(img1, img2, F1, F2, m);
-disp("Part 1 finished");
+disp("Part 0 finished");
+
+%% Testing
+clc;
+%[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 0.05);
+%[m, s] = filter_by_mask(mask1, mask2, F1, F2, m, s);
+visualize(img1, img2, F1, F2, m);
+%sort_descend_or_ascend_test(img1, img2, F1, F2, unfiltered_m, unfiltered_s);
+disp("Testing finished");
+
 
 %% Part 2: Finding the Camera Calibration Matrix (30 points) NOT FINISHED
 clc;
 [points_3d, points_2d] = get_correspondence_points(1, correspondence_matrix);
 c = calc_calibration(points_3d, points_2d);
 disp(c);
-disp("Part 2 finished");
-
-%% Testing
-clc;
-%[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 0.05);
-%[m, s] = filter_by_mask(mask1, mask2, F1, F2, m, s);
-%visualize(img1, img2, F1, F2, m);
-%sort_descend_or_ascend_test(img1, img2, F1, F2, unfiltered_m, unfiltered_s);
-test_calibration_matrix(1, correspondence_matrix);
-disp("Testing finished");
-
 
 
 %% Function Definitions
 function matrix=get_correspondence_matrix()
     % Summary:
     %   - returns the correspondence matrix that we pre-calcualted by hand
-    %   - matrix has 20 rows. These are the 20 possible points in the image
-    %   world.
-    %   - matrix has 24 columns. These are the 12 different images with
-    %   alternating X and Y values for each image.
+    %   - matrix has 20 rows. These are the 20 possible points on the lego
+    %   figure in the image. 24 is
     % Returns:
     %   - matrix: 20 x 24 matrix
     matrix = csvread('correspondence_points.csv');
