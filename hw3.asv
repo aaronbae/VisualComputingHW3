@@ -1,14 +1,17 @@
 % YOU CAN RUN THE CODE BY EACH SECTION LIKE JUPYTER NOTEBOOK
 %% Part 0 - Setup
 clear all; close all; clc;
+% add workpaths
 addpath('code');
 addpath('data');
-run('vlfeat/toolbox/vl_setup')
+run('vlfeat/toolbox/vl_setup'); % setup vlfeat library
+% get image_file names
 files = dir(fullfile('data','*.jpg'));
 for i=1:length(files)
     name = convertCharsToStrings(files(i).name);
     image_files(i) = name;
 end
+% Get hand-crafted correspondence points
 correspondence_matrix = get_correspondence_matrix();
 disp("Part 0 finished");
 
@@ -35,30 +38,44 @@ size(F2)
 [m, s] = filter_by_mask(mask1, mask2, F1, F2, unfiltered_m, unfiltered_s); 
 
 visualize(img1, img2, F1, F2, m);
-disp("Part 0 finished");
+disp("Part 1 finished");
+
+%% Part 2: Finding the Camera Calibration Matrix (30 points)
+clc;
+[points_3d, points_2d] = get_correspondence_points(2, correspondence_matrix);
+c = calc_calibration(points_3d, points_2d);
+disp(c);
+disp("Part 2 finished");
+
+%% Part 3: Refining the Matching Featuers (20 points)
+clc;
+disp("Part 3 finished");
+
+%% Part 4: Finding Depth (30 points)
+clc;
+disp("Part 4 finished");
 
 %% Testing
 clc;
 %[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 0.05);
 %[m, s] = filter_by_mask(mask1, mask2, F1, F2, m, s);
-visualize(img1, img2, F1, F2, m);
+%visualize(img1, img2, F1, F2, m);
 %sort_descend_or_ascend_test(img1, img2, F1, F2, unfiltered_m, unfiltered_s);
+%test_calibration_matrix(1, correspondence_matrix);
+
 disp("Testing finished");
 
 
-%% Part 2: Finding the Camera Calibration Matrix (30 points) NOT FINISHED
-clc;
-[points_3d, points_2d] = get_correspondence_points(1, correspondence_matrix);
-c = calc_calibration(points_3d, points_2d);
-disp(c);
-
 
 %% Function Definitions
+function get
 function matrix=get_correspondence_matrix()
     % Summary:
     %   - returns the correspondence matrix that we pre-calcualted by hand
-    %   - matrix has 20 rows. These are the 20 possible points on the lego
-    %   figure in the image. 24 is
+    %   - matrix has 20 rows. These are the 20 possible points in the image
+    %   world.
+    %   - matrix has 24 columns. These are the 12 different images with
+    %   alternating X and Y values for each image.
     % Returns:
     %   - matrix: 20 x 24 matrix
     matrix = csvread('correspondence_points.csv');
@@ -72,6 +89,11 @@ function [points_3d, points_2d]=get_correspondence_points(image_index, correspon
     %   - image_index: the index of the image
     %   - correspondence_matrix: the matrix from
     %   "get_correspondence_matrix" method
+    % Returns:
+    %   - points_3d: n x 3 matrix. n is the number of different points in
+    %   3D
+    %   - points_2d: n x 2 matrix. n is the number of different points in
+    %   2D. Column 1 is X and Column 2 is Y
     points_3d = [
         0 0 19; % Blue Top
         64 0 19;

@@ -1,14 +1,17 @@
 % YOU CAN RUN THE CODE BY EACH SECTION LIKE JUPYTER NOTEBOOK
 %% Part 0 - Setup
 clear all; close all; clc;
+% add workpaths
 addpath('code');
 addpath('data');
-run('vlfeat/toolbox/vl_setup')
+run('vlfeat/toolbox/vl_setup'); % setup vlfeat library
+% get image_file names
 files = dir(fullfile('data','*.jpg'));
 for i=1:length(files)
     name = convertCharsToStrings(files(i).name);
     image_files(i) = name;
 end
+% Get hand-crafted correspondence points
 correspondence_matrix = get_correspondence_matrix();
 disp("Part 0 finished");
 
@@ -37,25 +40,43 @@ size(F2)
 visualize(img1, img2, F1, F2, m);
 disp("Part 1 finished");
 
-%% Part 2: Finding the Camera Calibration Matrix (30 points) NOT FINISHED
+%% Part 2: Finding the Camera Calibration Matrix (30 points)
 clc;
-[points_3d, points_2d] = get_correspondence_points(1, correspondence_matrix);
-c = calc_calibration(points_3d, points_2d);
+c = calc_calibration(2, correspondence_matrix);
 disp(c);
 disp("Part 2 finished");
 
+%% Part 3: Refining the Matching Featuers (20 points)
+clc;
+[F, e1, e2] = get_fundamental_matrix(1, 2, correspondence_matrix);
+
 %% Testing
 clc;
-%[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 0.05);
-%[m, s] = filter_by_mask(mask1, mask2, F1, F2, m, s);
-%visualize(img1, img2, F1, F2, m);
-%sort_descend_or_ascend_test(img1, img2, F1, F2, unfiltered_m, unfiltered_s);
-test_calibration_matrix(1, correspondence_matrix);
 disp("Testing finished");
 
-
-
 %% Function Definitions
+function [F, e1, e2]=get_fundamental_matrix(image_index_1, image_index_2, correspondence_matrix)
+    % Summary:
+    %   - returns the specified pairs of image's fundamental matrix
+    % Parameters:
+    %   - image_index_1: integer FROM 1 to 12
+    %   - image_index_2: integer FROM 1 to 12
+    %   - correspondence_matrix: the matrix from
+    %   "get_correspondence_matrix" method
+    % Returns: 
+    %   - F: specified in "fundmatrix" function
+    %   - e1: specified in "fundmatrix" function
+    %   - e2: specified in "fundmatrix" function
+    [points_3d, img1_points_2d]=get_correspondence_points(image_index_1, correspondence_matrix, false);
+    [points_3d, img2_points_2d]=get_correspondence_points(image_index_2, correspondence_matrix, false);
+    non_nan_index = sum(~isnan(img1_points_2d) + ~isnan(img2_points_2d),2) == 4;
+    poitns_3d = points_3d(non_nan_index);
+    img1_points_2d = img1_points_2d(non_nan_index,:);
+    img1_points_2d = horzcat(img1_points_2d, ones(size(img1_points_2d, 1), 1)).';
+    img2_points_2d = img2_points_2d(non_nan_index,:);
+    img2_points_2d = horzcat(img2_points_2d, ones(size(img2_points_2d, 1), 1)).';
+    [F, e1, e2] = fundmatrix(img1_points_2d, img2_points_2d);
+end
 function matrix=get_correspondence_matrix()
     % Summary:
     %   - returns the correspondence matrix that we pre-calcualted by hand
@@ -69,13 +90,18 @@ function matrix=get_correspondence_matrix()
     matrix = matrix(:, 1:end-1);
     matrix(matrix==0) = NaN;
 end
-function [points_3d, points_2d]=get_correspondence_points(image_index, correspondence_matrix)
+function [points_3d, points_2d]=get_correspondence_points(image_index, correspondence_matrix, process_nan)
     % Summary:
     %   - returns the correspondence points for the specified image_index 
     % Parameters:
-    %   - image_index: the index of the image
+    %   - image_index: the index of the image. FROM 1 to 12
     %   - correspondence_matrix: the matrix from
     %   "get_correspondence_matrix" method
+    % Returns:
+    %   - points_3d: n x 3 matrix. n is the number of different points in
+    %   3D
+    %   - points_2d: n x 2 matrix. n is the number of different points in
+    %   2D. Column 1 is X and Column 2 is Y
     points_3d = [
         0 0 19; % Blue Top
         64 0 19;
@@ -99,53 +125,31 @@ function [points_3d, points_2d]=get_correspondence_points(image_index, correspon
         0 80 67];
     X = correspondence_matrix(:,image_index*2-1);
     Y = correspondence_matrix(:,image_index*2);
-    non_nan_index = ~isnan(X); % if X is Non-NaN, Y is Non-Nan
-    X = X(non_nan_index);
-    Y = Y(non_nan_index);
-    points_3d = points_3d(non_nan_index, :);
+    if process_nan
+        non_nan_index = ~isnan(X); % if X is Non-NaN, Y is Non-Nan
+        X = X(non_nan_index);
+        Y = Y(non_nan_index);
+        points_3d = points_3d(non_nan_index, :);
+    end
     points_2d = horzcat(X,Y);
     
-    % use only 8 points
-    threshold = min(size(points_3d,1), 8);
-    points_3d = points_3d(1:threshold, :);
-    points_2d = points_2d(1:threshold, :);
-end
-function test_calibration_matrix(index, correspondence_matrix)
-    % Summary:
-    %   - Displays the following information
-    %   - "the original 3D points" => "calculated points" vs "original 2D points" 
-    % Parameters:
-    %   - index: the index of the image
-    %   - correspondence_matrix: the matrix from
-    %   "get_correspondence_matrix" method
-    [points_3d, points_2d] = get_correspondence_points(index, correspondence_matrix);
-    c = calc_calibration(points_3d, points_2d);
-
-    for i=1:length(points_3d)
-        p1 = [points_3d(i,:) 1].';
-        result = (c*p1);
-        result = round((result / result(3)).');
-        p1 = p1.';
-        fprintf("%2d ", p1);
-        fprintf("  =>  ", p1);
-        fprintf("%6d ", result);
-        fprintf("  vs  ", p1);
-        fprintf("%6d ", points_2d(i,:));
-        disp(" ");
+    if process_nan
+        % use only 8 points
+        threshold = min(size(points_3d,1), 8);
+        points_3d = points_3d(1:threshold, :);
+        points_2d = points_2d(1:threshold, :);
     end
 end
-function c=calc_calibration(points_3d, points_2d)
+function c=calc_calibration(image_index, correspondence_matrix)
     % Summary:
-    %   - CURRENTLY RETURNING TRIVIAL MATRIX (NEEDS A FIX)
-    %   - returns a calibration matrix C from selected calibration points
-    %   - look at page 162 of the textbook for how to derive the linear
-    %   system
+    %   - returns the specified image's calibration matrix
     % Parameters:
-    %   - points_3d: n x 3 matrix with each row representing a 3D coordinate
-    %   - points_2d: n x 2 matrix with each row representing a 2D coordinate
-    % (pixel)
+    %   - image_index: integer FROM 1 to 12
+    %   - correspondence_matrix: the matrix from
+    %   "get_correspondence_matrix" method
     % Returns: 
     %   - C: 3 x 4 calibration matrix
+    [points_3d, points_2d] = get_correspondence_points(image_index, correspondence_matrix, true);
     A = [];
     B = [];
     for i=1:length(points_3d)
@@ -241,7 +245,6 @@ function visualize(img1, img2, F1, F2, m)
     set(ha(1),'position',[0 0 .5 1])
     set(ha(2),'position',[.5 0 .5 1])
 end
-
 function [newM, newS]=sort_and_cutoff(m, s, percentage)
     % Summary:
     %   - sorts the features by score and removes the poorest percentage
@@ -257,7 +260,6 @@ function [newM, newS]=sort_and_cutoff(m, s, percentage)
     newM = newM(:,1:index);
     newS = newS(1:index);
 end
-
 function img = getImage(index, image_files)
     % Summary:
     %   - retrieves the given image by index
