@@ -15,35 +15,14 @@ end
 correspondence_matrix = get_correspondence_matrix();
 disp("Part 0 finished");
 
-
 %% Part 1: Extracting and matching features between images (20 points)
 clc;
-% get the first image and extract features
-img1 = getImage(43, image_files);
-mask1 = getImage(44, image_files);
-[F1, D1] = vl_sift(img1);
-size(F1)
-
-% get the second image and extract features
-img2 = getImage(45, image_files);
-mask2 = getImage(46, image_files);
-[F2, D2] = vl_sift(img2);
-size(F2)
-
-% match the features : THIS PART DOESN'T WORK WELL
-[unfiltered_m, unfiltered_s] = vl_ubcmatch(D1, D2);
-% sort_and_cutoff isn't improving the results much, so leave it commented out for now
-%[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 1.0);
-%[m, s] = filter_by_mask(mask1, mask2, F1, F2, m, s); 
-[m, s] = filter_by_mask(mask1, mask2, F1, F2, unfiltered_m, unfiltered_s); 
-
-visualize(img1, img2, F1, F2, m);
+sift_results = get_sifts([1,2, 4], image_files);
 disp("Part 1 finished");
 
 %% Part 2: Finding the Camera Calibration Matrix (30 points)
 clc;
 c = calc_calibration(2, correspondence_matrix);
-disp(c);
 disp("Part 2 finished");
 
 %% Part 3: Refining the Matching Featuers (20 points)
@@ -53,11 +32,24 @@ disp("Part 3 finished");
 
 %% Part 4: Finding Depth (30 points)
 clc;
-get_sifts([1,2, 4], image_files);
 disp("Part 4 finished");
 
 %% Function Definitions
 function sift_results=get_sifts(array_of_indices, image_files)
+    % Summary:
+    %   - returns an array of structs that contain the following field data:
+    %       index: index of the given image
+    %       image: the image file
+    %       F    : the feature matrix
+    %       D    : the descriptor matrix
+    %       M    : the match matrix between the index and the next adjacent
+    %               image
+    %       S    : the corresponding score matrix
+    % Parameters:
+    %   - array_of_indicies: index of images FROM 1 to 12
+    %   - image_files: the string array of image file names
+    % Returns: 
+    %   - sift
     sift_results=[];
     index_check = sum((array_of_indices < 0) + (array_of_indices > 12));
     if index_check ~= 0
@@ -67,8 +59,10 @@ function sift_results=get_sifts(array_of_indices, image_files)
     % get all the images
     for i=array_of_indices
         modified_index = i*2-1;
-        image = 
-        sift_results = [sift_results struct('image', getImage(modified_index, image_files))];
+        image = getImage(modified_index, image_files);
+        [F, D] = vl_sift(image);
+        sift_results = [sift_results struct('index', i, 'image', image, 'F', F, 'D', D)];
+        disp("Finished sift for image "+num2str(i));
     end
     % calculate sift for every adjacent pairs
     for curr_i=1:length(sift_results)
@@ -76,6 +70,16 @@ function sift_results=get_sifts(array_of_indices, image_files)
         if curr_i == length(sift_results)
             next_i = 1;
         end
+        obj1 = sift_results(curr_i);
+        obj2 = sift_results(next_i);
+        [m, s] = vl_ubcmatch(obj1.D, obj2.D);
+        obj1.M = m;
+        obj2.S = s;
+        
+        % FURTHER FILTERING IS NOT IMPLEMENTED
+        %[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 1.0);
+        %[m, s] = filter_by_mask(mask1, mask2, F1, F2, m, s); 
+        disp("Finished matching for image "+num2str(obj1.index)+" and "+num2str(obj2.index));
     end        
 end
 function [F, e1, e2]=get_fundamental_matrix(image_index_1, image_index_2, correspondence_matrix)

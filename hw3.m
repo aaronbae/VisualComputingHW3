@@ -36,6 +36,20 @@ disp("Part 4 finished");
 
 %% Function Definitions
 function sift_results=get_sifts(array_of_indices, image_files)
+    % Summary:
+    %   - returns an array of structs that contain the following field data:
+    %       index: index of the given image
+    %       image: the image file
+    %       F    : the feature matrix
+    %       D    : the descriptor matrix
+    %       M    : the match matrix between the index and the next adjacent
+    %               image
+    %       S    : the corresponding score matrix
+    % Parameters:
+    %   - array_of_indicies: index of images FROM 1 to 12
+    %   - image_files: the string array of image file names
+    % Returns: 
+    %   - sift_results: array of struct objects
     sift_results=[];
     index_check = sum((array_of_indices < 0) + (array_of_indices > 12));
     if index_check ~= 0
@@ -59,8 +73,8 @@ function sift_results=get_sifts(array_of_indices, image_files)
         obj1 = sift_results(curr_i);
         obj2 = sift_results(next_i);
         [m, s] = vl_ubcmatch(obj1.D, obj2.D);
-        obj1.m = m;
-        obj2.s = s;
+        obj1.M = m;
+        obj2.S = s;
         
         % FURTHER FILTERING IS NOT IMPLEMENTED
         %[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 1.0);
