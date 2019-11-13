@@ -38,8 +38,8 @@ disp("Part 0 finished");
 
 %% Testing
 clc;
-[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 0.05);
-[m, s] = filter_by_mask(mask1, mask2, F1, F2, m, s);
+%[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 0.05);
+%[m, s] = filter_by_mask(mask1, mask2, F1, F2, m, s);
 visualize(img1, img2, F1, F2, m);
 %sort_descend_or_ascend_test(img1, img2, F1, F2, unfiltered_m, unfiltered_s);
 disp("Testing finished");
@@ -47,26 +47,53 @@ disp("Testing finished");
 
 %% Part 2: Finding the Camera Calibration Matrix (30 points) NOT FINISHED
 clc;
-% Hand Engineered matrix values
-points_3d = [0 0 19; 64 0 19; 0 0 29; 64 0 29; 64 64 29; 16 16 48; 48, 16, 48; 48, 48, 48];
-points_2d = [654 1902; 1569 1835; 637 1802; 1579 1731; 1453 1183; 872 1409; 1325, 1382; 1285, 1120];
-c = calc_calibration(points_3d, points_2d);
-
-for i=1:length(points_3d)
-    p1 = [points_3d(i,:) 1].';
-    result = (c*p1);
-    result = round((result / result(3)).');
-    p1 = p1.';
-    fprintf("%2d ", p1);
-    fprintf("  =>  ", p1);
-    fprintf("%6d ", result);
-    fprintf("  vs  ", p1);
-    fprintf("%6d ", points_2d(i,:));
-    disp(" ");
-end
+test_calibration_matrix(9);
 
 
 %% Function Definitions
+function test_calibration_matrix(num_points)
+    % Summary:
+    %   - Tests the calibration_matrix method
+    %   - The method already has 9 hand engineered points
+    %   - "the original 3D points" => "calculated points" vs "original 2D points" 
+    % Parameters:
+    %   - num_points: number of correspondence points to use. MAX 9
+    % Hand Engineered matrix values
+    points_3d = [0 0 29; 
+                64 0 29
+                64 64 29; 
+                16 16 48; 
+                48 16 48; 
+                48 48 48;
+                32 48 67;
+                32 80 67;
+                140 40 0];
+    points_2d = [ 640 1798;
+                  1571 1744;
+                  1449 1180;
+                  872 1412;
+                  1321 1382;
+                  1287 1122;
+                  1070 906;
+                  1063 710;
+                  2361 1564];
+    points_3d = points_3d(1:num_points, :);
+    points_2d = points_2d(1:num_points, :);
+    c = calc_calibration(points_3d, points_2d);
+
+    for i=1:length(points_3d)
+        p1 = [points_3d(i,:) 1].';
+        result = (c*p1);
+        result = round((result / result(3)).');
+        p1 = p1.';
+        fprintf("%2d ", p1);
+        fprintf("  =>  ", p1);
+        fprintf("%6d ", result);
+        fprintf("  vs  ", p1);
+        fprintf("%6d ", points_2d(i,:));
+        disp(" ");
+    end
+end
 function c=calc_calibration(points_3d, points_2d)
     % Summary:
     %   - CURRENTLY RETURNING TRIVIAL MATRIX (NEEDS A FIX)
@@ -95,9 +122,11 @@ function c=calc_calibration(points_3d, points_2d)
         A = [A; row1; row2];
         B = [B; -u; -v];
     end
+    warning('off','all');
     c = linsolve(A, B);
+    warning('on','all');
     c = [c; 1];
-    c = reshape(c, [3,4]);
+    c = reshape(c, [4,3]).';
 end
 function sort_descend_or_ascend_test(img1, img2, F1, F2, unfiltered_m, unfiltered_s)
     % Summary:

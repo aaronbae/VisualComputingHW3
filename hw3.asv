@@ -48,8 +48,19 @@ disp("Testing finished");
 %% Part 2: Finding the Camera Calibration Matrix (30 points) NOT FINISHED
 clc;
 % Hand Engineered matrix values
-points_3d = [0 0 19; 64 0 19; 0 0 29; 64 0 29; 64 64 29; 16 16 48; 48, 16, 48; 48, 48, 48];
-points_2d = [654 1902; 1569 1835; 637 1802; 1579 1731; 1453 1183; 872 1409; ];
+%points_3d = [0 0 19; 64 0 19; 0 0 29; 64 0 29; 64 64 29; 16 16 48; 48, 16, 48; 48, 48, 48];
+%points_2d = [654 1902; 1569 1835; 637 1802; 1579 1731; 1453 1183; 872 1409; 1325, 1382; 1285, 1120];
+points_3d = [ 64 0 29
+            64 64 29; 
+            16 16 48; 
+            48 16 48; 
+            48 48 48;
+            32 48 67;
+            32 80 67];
+points_2d = [ 1004 1606;
+              1258 1234;
+              37
+            ];
 c = calc_calibration(points_3d, points_2d);
 
 for i=1:length(points_3d)
@@ -60,6 +71,8 @@ for i=1:length(points_3d)
     fprintf("%2d ", p1);
     fprintf("  =>  ", p1);
     fprintf("%6d ", result);
+    fprintf("  vs  ", p1);
+    fprintf("%6d ", points_2d(i,:));
     disp(" ");
 end
 
@@ -67,8 +80,10 @@ end
 %% Function Definitions
 function c=calc_calibration(points_3d, points_2d)
     % Summary:
-    % - CURRENTLY RETURNING TRIVIAL MATRIX (NEEDS A FIX)
+    %   - CURRENTLY RETURNING TRIVIAL MATRIX (NEEDS A FIX)
     %   - returns a calibration matrix C from selected calibration points
+    %   - look at page 162 of the textbook for how to derive the linear
+    %   system
     % Parameters:
     %   - points_3d: n x 3 matrix with each row representing a 3D coordinate
     %   - points_2d: n x 2 matrix with each row representing a 2D coordinate
@@ -79,11 +94,15 @@ function c=calc_calibration(points_3d, points_2d)
     B = [];
     for i=1:length(points_3d)
         p_3d = points_3d(i,:);
+        x = p_3d(1);
+        y = p_3d(2);
+        z = p_3d(3);
+        w = 1;
         p_2d = points_2d(i,:);
         u = p_2d(1);
         v = p_2d(2);
-        row1 = [-p_3d(1) -p_3d(2) -p_3d(3) -1 0 0 0 0 u*p_3d(1) u*p_3d(2) u*p_3d(3)];
-        row2 = [0 0 0 0 -p_3d(1) -p_3d(2) -p_3d(3) -1 v*p_3d(1) v*p_3d(2) v*p_3d(3)];
+        row1 = [-x -y -z -w  0  0  0  0 u*x u*y u*z];
+        row2 = [ 0  0  0  0 -z -y -z -w v*x v*y v*z];
         A = [A; row1; row2];
         B = [B; -u; -v];
     end
