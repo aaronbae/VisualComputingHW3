@@ -9,6 +9,7 @@ for i=1:length(files)
     name = convertCharsToStrings(files(i).name);
     image_files(i) = name;
 end
+correspondence_matrix = get_correspondence_matrix();
 disp("Part 0 finished");
 
 
@@ -47,11 +48,52 @@ disp("Testing finished");
 
 %% Part 2: Finding the Camera Calibration Matrix (30 points) NOT FINISHED
 clc;
-test_calibration_matrix(9);
+[points_3d, points_2d] = get_correspondence_points(1, correspondence_matrix);
+c = calc_calibration(points_3d, points_2d);
 
 
 %% Function Definitions
-function test_calibration_matrix(num_points)
+function matrix=get_correspondence_matrix()
+    matrix = csvread('correspondence_points.csv');
+    matrix = matrix(:, 1:end-1);
+    matrix(matrix==0) = NaN;
+end
+function [points_3d, points_2d]=get_correspondence_points(image_index, correspondence_matrix)
+    points_3d = [
+        0 0 19; % Blue Top
+        64 0 19;
+        64 64 19;
+        0 64 19;
+        0 0 29; % Red Top
+        64 0 29;
+        64 64 29;
+        0 64 29;
+        16 16 48; % Center Green Top
+        48 16 48;
+        48 48 48;
+        16 48 48;
+        0 48 48; % Corner Greeen Top
+        32 48 48;
+        32 80 48;
+        0 80 48;
+        0 48 67; % Yellow Top
+        32 48 67;
+        32 80 67;
+        0 80 67];
+    X = correspondence_matrix(:,image_index*2-1);
+    Y = correspondence_matrix(:,image_index*2);
+    non_nan_index = ~isnan(X); % if X is Non-NaN, Y is Non-Nan
+    X = X(non_nan_index);
+    Y = Y(non_nan_index);
+    points_3d = points_3d(non_nan_index, :);
+    points_2d = horzcat(X,Y);
+    
+    % use only 8 points
+    threshold = min(size(points_3d,1), 8);
+    points_3d = points_3d(1:threshold, :);
+    points_2d = points_2d(1:threshold, :);
+end
+function test_calibration_matrix(correspondence_matrix)
     % Summary:
     %   - Tests the calibration_matrix method
     %   - The method already has 9 hand engineered points
@@ -59,26 +101,7 @@ function test_calibration_matrix(num_points)
     % Parameters:
     %   - num_points: number of correspondence points to use. MAX 9
     % Hand Engineered matrix values
-    points_3d = [0 0 29; 
-                64 0 29
-                64 64 29; 
-                16 16 48; 
-                48 16 48; 
-                48 48 48;
-                32 48 67;
-                32 80 67;
-                140 40 0];
-    points_2d = [ 640 1798;
-                  1571 1744;
-                  1449 1180;
-                  872 1412;
-                  1321 1382;
-                  1287 1122;
-                  1070 906;
-                  1063 710;
-                  2361 1564];
-    points_3d = points_3d(1:num_points, :);
-    points_2d = points_2d(1:num_points, :);
+    [points_3d, points_2d] = get_correspondence_points(1, correspondence_matrix);
     c = calc_calibration(points_3d, points_2d);
 
     for i=1:length(points_3d)
