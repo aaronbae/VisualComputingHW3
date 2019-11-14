@@ -17,7 +17,7 @@ disp("Part 0 finished");
 
 %% Part 1: Extracting and matching features between images (20 points)
 clc;
-sift_results = get_sifts([1,2, 4], image_files);
+sift_results = get_sifts([1,2], image_files);
 disp("Part 1 finished");
 
 %% Part 2: Finding the Camera Calibration Matrix (30 points)
@@ -35,6 +35,28 @@ clc;
 disp("Part 4 finished");
 
 %% Function Definitions
+function filter_features(sift_results)
+    for i=1:length(sift_results)
+        % get the objects 
+        obj1 = sift_results(i);
+        next_i = i + 1;
+        if i == length(sift_results)
+            next_i = 1;
+        end
+        obj2 = sift_results(next_i);
+        % get the features and descriptors. Then, loop every feature
+        features = obj1.F;
+        descriptor = obj1.D;
+        for j=1:length(features)
+            f_img1 = features(:,j);
+            f_img2 = obj2.F(:,j);
+            m = obj1.M(:, j);
+            % check from img1 to img2
+            
+            % check from img2 to img1
+        end
+    end
+end
 function sift_results=get_sifts(array_of_indices, image_files)
     % Summary:
     %   - returns an array of structs that contain the following field data:
@@ -51,6 +73,7 @@ function sift_results=get_sifts(array_of_indices, image_files)
     % Returns: 
     %   - sift_results: array of struct objects
     sift_results=[];
+    temp_results=[];
     index_check = sum((array_of_indices < 0) + (array_of_indices > 12));
     if index_check ~= 0
         ME = MException('HW3:invalidInputIndex', 'All image indices must be between 0 and 12');
@@ -61,20 +84,21 @@ function sift_results=get_sifts(array_of_indices, image_files)
         modified_index = i*2-1;
         image = getImage(modified_index, image_files);
         [F, D] = vl_sift(image);
-        sift_results = [sift_results struct('index', i, 'image', image, 'F', F, 'D', D)];
+        temp_results = [temp_results struct('index', i, 'image', image, 'F', F, 'D', D)];
         disp("Finished sift for image "+num2str(i));
     end
     % calculate sift for every adjacent pairs
-    for curr_i=1:length(sift_results)
+    for curr_i=1:length(temp_results)
         next_i = curr_i + 1;
-        if curr_i == length(sift_results)
+        if curr_i == length(temp_results)
             next_i = 1;
         end
-        obj1 = sift_results(curr_i);
-        obj2 = sift_results(next_i);
+        obj1 = temp_results(curr_i);
+        obj2 = temp_results(next_i);
         [m, s] = vl_ubcmatch(obj1.D, obj2.D);
         obj1.M = m;
-        obj2.S = s;
+        obj1.S = s;
+        sift_results = [sift_results obj1];
         
         % FURTHER FILTERING IS NOT IMPLEMENTED
         %[m, s] = sort_and_cutoff(unfiltered_m, unfiltered_s, 1.0);
