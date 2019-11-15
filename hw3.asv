@@ -19,25 +19,64 @@ images = extract_features(index_conversion, image_files, false);
 match_indices = [1 2; 3 4; 5, 6];
 match_results = match_features(match_indices, images);
 for i=1:size(match_indices, 1)
-    visualize_features(1, images, match_results, "deliverable_c_"+num2str(i)+".jpg", true);
+    visualize_features(i, images, match_results, "deliverable_c_"+num2str(i)+".jpg", true);
 end
 disp("Deliverable c Finished");
 
 %% Deliverable d and e: Plot of Camera Orientation and the Horse
 clc; close all;
 images = extract_features( [1,2], image_files, true);
-disp(size(images(1).features)
-%%
+disp(size(images(1).features));
+
+%% 
+clc; close all;
 match_results = match_features( [1,2], images);
+
+%% Testing: view the points - shows the sparcity of the features
+clc; close all;
 visualize_features(1, images, match_results, "deliverable_de.jpg", true);
 disp("Deliverable d and e Finished");
 
-%%
-imshow(images(1).image);
-hold on;
-scatter(images(1).features(1,:),images(1).features(2,:), 10, 'r', 'filled');
+%% find parameters of the camera
+clc;
+plot_feature_3d_points(images, match_results);
 
 %% Function Definition
+function plot_feature_3d_points(images, match_results)
+    cm = get_correspondence_matrix();
+    for i=1:length(match_results)
+        match_obj = match_results(1, i);
+        img1 = images(match_obj.index1);
+        img2 = images(match_obj.index2);
+        [K,R1,T1] = get_KRT(match_obj.index1, cm);
+        [K,R2,T2] = get_KRT(match_obj.index2, cm);
+        
+        center1 = inv(K*R1)*(K*R1*T1);
+        center2 = inv(K*R2)*(K*R2*T2);
+        
+        
+        f = K(1,1);
+        b = abs(sum(T1-T2));
+        
+        curr_matches = match_obj.matches;
+        points_3d = zeros(2,size(curr_matches,2));
+        for j=1:size(curr_matches, 2)
+            pair = curr_matches(:,j);
+            p1 = img1.features(1:2,pair(1));
+            p2 = img2.features(1:2,pair(2));
+            d = p1 -p2;
+            points_3d(:,j) = (f*b./d).';    
+        end
+    end
+end
+
+function [K,R,T]=get_KRT(index, correspondence_matrix)
+    c = calc_calibration(index, correspondence_matrix);
+    M = c(:,1:3);
+    [K, R] = qr(M);
+    T = inv(M)*c(:, 4);
+end
+
 function file_names = get_file_names()
     files = dir(fullfile('data','*.jpg'));
     for i=1:length(files)
@@ -47,6 +86,7 @@ function file_names = get_file_names()
 end
 
 function images=extract_features(array_of_indices, image_files, dense_sift_on_horse)
+    FEATURE_REDUCTION_CONSTANT = 5;
     images=[];
     index_check = sum((array_of_indices < 0) + (array_of_indices > 24));
     if index_check ~= 0
@@ -70,7 +110,7 @@ function images=extract_features(array_of_indices, image_files, dense_sift_on_ho
             for j=1:size(tempF, 2)
                 p = floor(tempF(1:2, j));
                 %if mask(p(2), p(1))
-                if mask(p(2), p(1)) && mod(p(1), 3) == 0 && mod(p(2), 3) == 0
+                if mask(p(2), p(1)) && mod(p(1), FEATURE_REDUCTION_CONSTANT) == 0 && mod(p(2), FEATURE_REDUCTION_CONSTANT) == 0
                     filter(j) = 1;
                 end
             end
@@ -83,6 +123,7 @@ function images=extract_features(array_of_indices, image_files, dense_sift_on_ho
 end
 
 function match_results=match_features(indices, images)
+    LINE_THRESHOLD_CONSTANT = 10;
     disp("Feature matching started...");
     % calculate sift for every adjacent pairs
     match_results = [];
@@ -121,7 +162,7 @@ function match_results=match_features(indices, images)
             v = fundamental_matrix*p1.';
             m = -v(1)/v(2);
             b = -v(3)/v(2);
-            if abs(p2(2) - m*p2(1)-b) < 4
+            if abs(p2(2) - m*p2(1)-b) < LINE_THRESHOLD_CONSTANT
                 filter(j) = 1;
             end
         end
