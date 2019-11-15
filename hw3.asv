@@ -26,7 +26,7 @@ disp("Deliverable c Finished");
 %% Deliverable d and e: Plot of Camera Orientation and the Horse
 clc; close all;
 images = extract_features( [1,2], image_files, true);
-disp(size(images(1).features));
+disp(size(images(1).features)
 %%
 match_results = match_features( [1,2], images);
 visualize_features(1, images, match_results, "deliverable_de.jpg", true);
